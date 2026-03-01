@@ -6247,58 +6247,44 @@
 
     const applyBoxUVs = (geo, dx, dy, dz, pos) => {
       const uv = geo.attributes.uv.array;
-      // Box faces: 0,1: +x,-x; 2,3: +y,-y; 4,5: +z,-z
-      // For each face, we use the world-space coordinates of the mesh's corners
+      // Box faces order: 0:+x, 1:-x, 2:+y, 3:-y, 4:+z, 5:-z
       const x = pos.x, y = pos.y, z = pos.z;
 
-      // +X (dy, dz) -> uses z, y
-      const x_p_u1 = (z - dy / 2) / TEX_SCALE, x_p_v1 = (y + dz / 2) / TEX_SCALE;
-      const x_p_u2 = (z + dy / 2) / TEX_SCALE, x_p_v2 = (y - dz / 2) / TEX_SCALE;
-      uv[0] = x_p_u1; uv[1] = x_p_v1;
-      uv[2] = x_p_u2; uv[3] = x_p_v1;
-      uv[4] = x_p_u1; uv[5] = x_p_v2;
-      uv[6] = x_p_u2; uv[7] = x_p_v2;
+      // +X and -X (Side faces in world Y-Z plane)
+      // U = z-coordinate (horizontal), V = y-coordinate (vertical)
+      for (let i = 0; i < 2; i++) {
+        const off = i * 8;
+        const uMin = (z - dz / 2) / TEX_SCALE, uMax = (z + dz / 2) / TEX_SCALE;
+        const vMin = (y - dy / 2) / TEX_SCALE, vMax = (y + dy / 2) / TEX_SCALE;
+        uv[off + 0] = uMin; uv[off + 1] = vMax;
+        uv[off + 2] = uMax; uv[off + 3] = vMax;
+        uv[off + 4] = uMin; uv[off + 5] = vMin;
+        uv[off + 6] = uMax; uv[off + 7] = vMin;
+      }
 
-      // -X (dy, dz) -> uses z, y
-      const x_m_u1 = (z + dy / 2) / TEX_SCALE, x_m_v1 = (y + dz / 2) / TEX_SCALE;
-      const x_m_u2 = (z - dy / 2) / TEX_SCALE, x_m_v2 = (y - dz / 2) / TEX_SCALE;
-      uv[8] = x_m_u1; uv[9] = x_m_v1;
-      uv[10] = x_m_u2; uv[11] = x_m_v1;
-      uv[12] = x_m_u1; uv[13] = x_m_v2;
-      uv[14] = x_m_u2; uv[15] = x_m_v2;
+      // +Y and -Y (Top/Bottom faces in world X-Z plane)
+      // U = x-coordinate, V = z-coordinate
+      for (let i = 2; i < 4; i++) {
+        const off = i * 8;
+        const uMin = (x - dx / 2) / TEX_SCALE, uMax = (x + dx / 2) / TEX_SCALE;
+        const vMin = (z - dz / 2) / TEX_SCALE, vMax = (z + dz / 2) / TEX_SCALE;
+        uv[off + 0] = uMin; uv[off + 1] = vMin;
+        uv[off + 2] = uMax; uv[off + 3] = vMin;
+        uv[off + 4] = uMin; uv[off + 5] = vMax;
+        uv[off + 6] = uMax; uv[off + 7] = vMax;
+      }
 
-      // +Y (dx, dz) -> uses x, z (actually height in this project's Y)
-      // Project uses Y as vertical, Z as depth. THREE.BoxGeometry: +Y is top.
-      const y_p_u1 = (x - dx / 2) / TEX_SCALE, y_p_v1 = (z + dy / 2) / TEX_SCALE;
-      const y_p_u2 = (x + dx / 2) / TEX_SCALE, y_p_v2 = (z - dy / 2) / TEX_SCALE;
-      uv[16] = y_p_u1; uv[17] = y_p_v1;
-      uv[18] = y_p_u2; uv[19] = y_p_v1;
-      uv[20] = y_p_u1; uv[21] = y_p_v2;
-      uv[22] = y_p_u2; uv[23] = y_p_v2;
-
-      // -Y (dx, dz)
-      const y_m_u1 = (x - dx / 2) / TEX_SCALE, y_m_v1 = (z - dy / 2) / TEX_SCALE;
-      const y_m_u2 = (x + dx / 2) / TEX_SCALE, y_m_v2 = (z + dy / 2) / TEX_SCALE;
-      uv[24] = y_m_u1; uv[25] = y_m_v1;
-      uv[26] = y_m_u2; uv[27] = y_m_v1;
-      uv[28] = y_m_u1; uv[29] = y_m_v2;
-      uv[30] = y_m_u2; uv[31] = y_m_v2;
-
-      // +Z (dx, dy) -> uses x, y
-      const z_p_u1 = (x - dx / 2) / TEX_SCALE, z_p_v1 = (y + dz / 2) / TEX_SCALE;
-      const z_p_u2 = (x + dx / 2) / TEX_SCALE, z_p_v2 = (y - dz / 2) / TEX_SCALE;
-      uv[32] = z_p_u1; uv[33] = z_p_v1;
-      uv[34] = z_p_u2; uv[35] = z_p_v1;
-      uv[36] = z_p_u1; uv[37] = z_p_v2;
-      uv[38] = z_p_u2; uv[39] = z_p_v2;
-
-      // -Z (dx, dy)
-      const z_m_u1 = (x + dx / 2) / TEX_SCALE, z_m_v1 = (y + dz / 2) / TEX_SCALE;
-      const z_m_u2 = (x - dx / 2) / TEX_SCALE, z_m_v2 = (y - dz / 2) / TEX_SCALE;
-      uv[40] = z_m_u1; uv[41] = z_m_v1;
-      uv[42] = z_m_u2; uv[43] = z_m_v1;
-      uv[44] = z_m_u1; uv[45] = z_m_v2;
-      uv[46] = z_m_u2; uv[47] = z_m_v2;
+      // +Z and -Z (Front/Back faces in world X-Y plane)
+      // U = x-coordinate (horizontal), V = y-coordinate (vertical)
+      for (let i = 4; i < 6; i++) {
+        const off = i * 8;
+        const uMin = (x - dx / 2) / TEX_SCALE, uMax = (x + dx / 2) / TEX_SCALE;
+        const vMin = (y - dy / 2) / TEX_SCALE, vMax = (y + dy / 2) / TEX_SCALE;
+        uv[off + 0] = uMin; uv[off + 1] = vMax;
+        uv[off + 2] = uMax; uv[off + 3] = vMax;
+        uv[off + 4] = uMin; uv[off + 5] = vMin;
+        uv[off + 6] = uMax; uv[off + 7] = vMin;
+      }
 
       geo.attributes.uv.needsUpdate = true;
     };
