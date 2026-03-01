@@ -6243,6 +6243,33 @@
     // --- Materials Cache ---
     const materialsMap = {};
     const textureLoader = new THREE.TextureLoader();
+    const TEX_SCALE = 150; // Units per texture repeat
+
+    const applyBoxUVs = (geo, dx, dy, dz) => {
+      const uv = geo.attributes.uv.array;
+      const dims = [
+        [dy, dz], [dy, dz], // +x, -x
+        [dx, dy], [dx, dy], // +y, -y
+        [dx, dz], [dx, dz]  // +z, -z
+      ];
+      for (let i = 0; i < 6; i++) {
+        const [w, h] = dims[i];
+        const off = i * 8;
+        uv[off + 0] = 0; uv[off + 1] = h / TEX_SCALE;
+        uv[off + 2] = w / TEX_SCALE; uv[off + 3] = h / TEX_SCALE;
+        uv[off + 4] = 0; uv[off + 5] = 0;
+        uv[off + 6] = w / TEX_SCALE; uv[off + 7] = 0;
+      }
+      geo.attributes.uv.needsUpdate = true;
+    };
+
+    const applyShapeUVs = (geo) => {
+      const uv = geo.attributes.uv.array;
+      for (let i = 0; i < uv.length; i++) {
+        uv[i] /= TEX_SCALE;
+      }
+      geo.attributes.uv.needsUpdate = true;
+    };
 
     const getMaterial = (type, rgba) => {
       if (!materialsMap[type]) {
@@ -6274,6 +6301,7 @@
       const dx = Math.abs(x2 - x1), dy = Math.abs(z2 - z1), dz = Math.abs(y2 - y1);
       if (dx < 1 || dy < 1 || dz < 1) return;
       const geo = new THREE.BoxGeometry(dx, dy, dz);
+      applyBoxUVs(geo, dx, dy, dz);
       const mesh = new THREE.Mesh(geo, getMaterial(w.type, w.color));
       mesh.position.set((x1 + x2) / 2, (z1 + z2) / 2, (y1 + y2) / 2);
       mesh.castShadow = mesh.receiveShadow = true;
@@ -6293,6 +6321,7 @@
       const shape = new THREE.Shape();
       f.polygon.forEach((p, i) => { if (i === 0) shape.moveTo(p[0], -p[1]); else shape.lineTo(p[0], -p[1]); });
       const geo = new THREE.ShapeGeometry(shape);
+      applyShapeUVs(geo);
       const mesh = new THREE.Mesh(geo, getMaterial(f.type, f.color));
       mesh.rotation.x = -Math.PI / 2;
       mesh.position.y = f.z;
@@ -6447,9 +6476,8 @@
       }
       textureLoader.load(url, tex => {
         tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-        // Scale 4 as preferred by user
-        const scale = 4;
-        tex.repeat.set(scale, scale);
+        // Use unit repeat; scale is handled via UVs
+        tex.repeat.set(1, 1);
         mat.map = tex;
         mat.userData.textureUrl = url;
         // No color when textured
